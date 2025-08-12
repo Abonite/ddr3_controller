@@ -1,5 +1,7 @@
 library IEEE;
+Library UNISIM;
 
+use UNISIM.vcomponents.all;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
@@ -19,11 +21,12 @@ entity ddr3_controller is
     );
     port (
         clk             : in std_logic;
+        ddr_clk         : in std_logic;
         reset           : in std_logic;
 
         o_ddr_ck_p      : out std_logic;
         o_ddr_ck_n      : out std_logic;
-        o_ddr_cke       : out std_logic;
+        o_ddr_cke       : out std_logic := '0';
         o_ddr_cs_n      : out std_logic;
         o_ddr_ras_n     : out std_logic;
         o_ddr_cas_n     : out std_logic;
@@ -43,12 +46,11 @@ architecture Behavioral of ddr3_controller is
     constant REST: std_logic_vector(3 downto 0) := "0001";
     constant ZQCL: std_logic_vector(3 downto 0) := "0010";
     
-    constant RESET_COUNT_MAX : unsigned(16 downto 0) := to_unsigned(integer(200 us / CLK_PERIOD), 17);
-    
     signal r_curr_state: std_logic_vector(3 downto 0) := INIT;
     signal r_next_state: std_logic_vector(3 downto 0) := INIT;
 
-    signal reset_counter: unsigned(16 downto 0) := (others => '0');
+    signal resetting: std_logic := '0';
+    signal resetted: std_logic := '0';
 begin
     process(clk) begin
         if rising_edge(clk) then
@@ -62,54 +64,46 @@ begin
         end if;
     end process;
 
-    process(r_curr_state, reset_counter) begin
+    process(r_curr_state, resetted) begin
         case r_curr_state is
             when INIT =>
                 r_next_state <= REST;  -- Transition to REST state after INIT
             when REST =>
-                if (reset_counter = RESET_COUNT_MAX) then
+                if (resetted = '1') then
                     r_next_state <= ZQCL;
                 else
                     r_next_state <= REST;  -- Remain in INIT if condition not met
                 end if;
             when ZQCL =>
-                o_ddr_reset_n <= '1';  -- Assuming ZQCL does not change reset state
                 r_next_state <= INIT;  -- Loop back to INIT for simplicity
-
             when others =>
-                o_ddr_reset_n <= '0';  -- Default case, can be modified as needed
                 r_next_state <= INIT;   -- Fallback to INIT
         end case;
     end process;
 
-    process(clk) begin
-        if rising_edge(clk) then
-            case r_curr_state is
-                when INIT =>
-                    o_ddr_reset_n <= '0';
-                when REST =>
-                    o_ddr_reset_n <= '0';
-                when others =>
-                    o_ddr_reset_n <= '1';
-            end case;
-        end if;
-    end process;
+    u_reset: entity work.powerup_reset
+        generic map (
+            t_RESET => 200 us,
+            t_CKE => DDR_tCKSRX,
+            CLK_PERIOD => CLK_PERIOD
+        )
+        port map (
+            clk => clk,
+            i_resetting => resetting,
+            o_reset_n => o_ddr_reset_n,
+            o_cke => o_ddr_cke,
+            o_reset_finished => resetted
+        );
 
-    process(clk) begin
-        if rising_edge(clk) then
-            case r_curr_state is
-                when REST =>
-                    if reset_counter < RESET_COUNT_MAX then
-                        reset_counter <= reset_counter + 1;
-                    else
-                        reset_counter <= (others => '0');
-                    end if;
-                when others =>
-                    reset_counter <= (others => '0');
-            end case; 
-        else
-            reset_counter <= reset_counter;
-        end if;
-    end process;
-
+    OBUFDS_inst : OBUFDS
+        generic map (
+            IOSTANDARD => "DEFAULT", -- Specify the output I/O standard
+            SLEW => "FAST"
+        )
+        port map (
+            O => o_ddr_ck_p,     -- Diff_p output (connect directly to top-level port)
+            OB => o_ddr_ck_n,   -- Diff_n output (connect directly to top-level port)
+            I => ddr_clk      -- Buffer input 
+        );
+  
 end architecture;
