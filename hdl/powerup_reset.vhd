@@ -7,6 +7,7 @@ entity powerup_reset is
     generic (
         t_RESET: time := -1 us;
         t_CKE: time := -1 ns;
+        t_XPR: time := -1 ns;
         t_MRD: integer := 1;
 
         UI_CLK_PERIOD: time := -1 ns;
@@ -43,6 +44,7 @@ architecture Behavioral of powerup_reset is
     constant RESET_COUNT_MAX : unsigned(16 downto 0) := to_unsigned(integer(t_RESET / UI_CLK_PERIOD), 17);
     constant CKE_COUNT_MAX : unsigned(16 downto 0) := to_unsigned(integer(t_CKE / UI_CLK_PERIOD), 17);
     constant RECK_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(500 us / UI_CLK_PERIOD), 18);
+    constant XPR_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(t_XPR / UI_CLK_PERIOD), 18);
     constant MRD_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(t_MRD, 18);
 
     signal r_curr_state : std_logic_vector := REST;
@@ -51,6 +53,7 @@ architecture Behavioral of powerup_reset is
     signal r_reset_counter : unsigned(16 downto 0) := (others => '0');
     signal r_reclk_counter : unsigned(17 downto 0) := (others => '0');
     signal r_mrd_counter : unsigned(17 downto 0) := (others => '0');
+    signal r_xpr_counter : unsigned(17 downto 0) := (others => '0');
     signal r_mrd_index: unsigned(2 downto 0) := (others => '0');
     signal r_baddr: std_logic_vector(2 downto 0) := "010";
     signal r_addr: std_logic_vector(15 downto 0) := (others => '0');
@@ -148,7 +151,11 @@ begin
             when RECK =>
                 r_cs_n <= '1';
             when CREG =>
-                r_cs_n <= '0';
+                if (r_mrd_counter = 0) then
+                    r_cs_n <= '0';
+                else
+                    r_cs_n <= '0';
+                end if;
             when others =>
                 r_cs_n <= '0';
             end case;
@@ -162,24 +169,20 @@ begin
             case r_curr_state is
                 when CREG =>
                     if (r_mrd_counter = 0) then
-                        r_cs_n <= '0';
                         r_ras_n <= '0';
                         r_cas_n <= '0';
                         r_we_n <= '0';
                     else
-                        r_cs_n <= '0';
                         r_ras_n <= '1';
                         r_cas_n <= '1';
                         r_we_n <= '1';
                     end if;
                 when others =>
-                    r_cs_n <= '0';
                     r_ras_n <= '1';
                     r_cas_n <= '1';
                     r_we_n <= '1';
             end case;
         else
-            r_cs_n <= r_cs_n;
             r_ras_n <= r_ras_n;
             r_cas_n <= r_cas_n;
             r_we_n <= r_we_n;
@@ -230,10 +233,12 @@ begin
         if rising_edge(clk) then
             case r_curr_state is
             when CREG =>
-                if (r_mrd_counter = 0 and r_mrd_counter /= 3) then
+                if (r_mrd_counter = 0 and r_mrd_index /= 3) then
                     r_mrd_index <= r_mrd_index + 1;
+                elsif (r_mrd_counter /= 0) then
+                    r_mrd_index <= r_mrd_index;
                 else
-                    r_mrd_index <= B"010";
+                    r_mrd_index <= "000";
                 end if;
             when others =>
                 r_mrd_index <= B"010";
@@ -291,6 +296,23 @@ begin
             end case; 
         else
             r_reclk_counter <= r_reclk_counter;
+        end if;
+    end process;
+
+    process(clk) begin
+        if rising_edge(clk) then
+            case r_curr_state is
+                when RECK =>
+                    if r_xpr_counter < XPR_COUNT_MAX then
+                        r_xpr_counter <= r_xpr_counter + 1;
+                    else
+                        r_xpr_counter <= r_xpr_counter;
+                    end if;
+                when others =>
+                    r_xpr_counter <= (others => '0');
+            end case; 
+        else
+            r_xpr_counter <= r_xpr_counter;
         end if;
     end process;
 
