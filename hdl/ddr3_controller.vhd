@@ -85,7 +85,14 @@ begin
         generic map (
             t_RESET => 200 us,
             t_CKE => DDR_tCKSRX,
-            CLK_PERIOD => CLK_PERIOD
+            t_MRD => 4,
+
+            UI_CLK_PERIOD => CLK_PERIOD,
+
+            MR0 => "1111111111111111",
+            MR1 => "1010101010101010",
+            MR2 => "0101010101010101",
+            MR3 => "0000000000000000"
         )
         port map (
             clk => clk,

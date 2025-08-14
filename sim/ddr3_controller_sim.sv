@@ -1,6 +1,8 @@
 module ddr3_controller_sim();
-    localparam CLK_PERIOD = 10; // Clock period in nanoseconds (100 MHz)
-    localparam DDR_CLK_PERIOD = 3; // DDR clock period in nanoseconds (666 MHz)
+    localparam DDR_CLK_PERIOD = 3;  // DDR clock period in nanoseconds (666 MHz)
+    localparam UIDDDR = 2;          //2:1
+
+    localparam CLK_PERIOD = DDR_CLK_PERIOD * UIDDDR;
 
     logic clk;
     logic rst;
