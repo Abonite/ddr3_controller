@@ -174,7 +174,7 @@ begin
             when CREG =>
                 r_cs_n <= '0';
             when FNSH =>
-                r_cs_n <= '1';
+                r_cs_n <= '0';
             when others =>
                 r_cs_n <= '0';
             end case;
@@ -274,11 +274,7 @@ begin
         if rising_edge(clk) then
             case r_curr_state is
                 when CREG =>
-                    if (r_mrd_counter < MRD_COUNT_MAX) then
-                        r_mrd_counter <= r_mrd_counter + 1;
-                    else
-                        r_mrd_counter <= (others => '0');
-                    end if;
+                    r_mrd_counter <= r_mrd_counter + 1;
                 when others =>
                     r_mrd_counter <= (others => '0');
             end case;
@@ -291,11 +287,7 @@ begin
         if rising_edge(clk) then
             case r_curr_state is
                 when REST =>
-                    if (r_reset_counter < RESET_COUNT_MAX) then
-                        r_reset_counter <= r_reset_counter + 1;
-                    else
-                        r_reset_counter <= (others => '0');
-                    end if;
+                    r_reset_counter <= r_reset_counter + 1;
                 when others =>
                     r_reset_counter <= (others => '0');
             end case; 
@@ -308,11 +300,7 @@ begin
         if rising_edge(clk) then
             case r_curr_state is
                 when RECK =>
-                    if (r_reclk_counter < RECK_COUNT_MAX + XPR_COUNT_MAX) then
-                        r_reclk_counter <= r_reclk_counter + 1;
-                    else
-                        r_reclk_counter <= (others => '0');
-                    end if;
+                    r_reclk_counter <= r_reclk_counter + 1;
                 when others =>
                     r_reclk_counter <= (others => '0');
             end case; 

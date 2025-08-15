@@ -46,6 +46,8 @@ architecture Behavioral of ddr3_controller is
     constant REST: std_logic_vector(3 downto 0) := "0001";
     constant ZQCL: std_logic_vector(3 downto 0) := "0010";
     constant RADY: std_logic_vector(3 downto 0) := "0100";
+
+    constant ZQCL_COUNT_MAX: unsigned := to_unsigned(integer((DDR_tZQinit / DDR_CLK_PERIOD) - 1), 10);
     
     signal r_curr_state: std_logic_vector(3 downto 0) := INIT;
     signal r_next_state: std_logic_vector(3 downto 0) := INIT;
@@ -53,6 +55,8 @@ architecture Behavioral of ddr3_controller is
     signal r_start_pu_reset: std_logic := '0';
     signal r_pu_resetting: std_logic := '0';
     signal w_pu_reset_finished: std_logic := '0';
+
+    signal r_zqcl_counter: unsigned(9 downto 0) := (others => '0');
 
     signal ddr_cke: std_logic := '0';
     signal ddr_cs_n: std_logic := '1';
@@ -100,7 +104,13 @@ begin
                     r_next_state <= REST;  -- Remain in INIT if condition not met
                 end if;
             when ZQCL =>
-                r_next_state <= RADY;  -- Loop back to INIT for simplicity
+                if (r_zqcl_counter < ZQCL_COUNT_MAX) then
+                    r_next_state <= ZQCL;  -- Stay in ZQCL until counter reaches max
+                else
+                    r_next_state <= RADY;  -- Transition to RADY after ZQCL
+                end if;
+            when RADY =>
+                r_next_state <= RADY;  -- Transition back to INIT after RADY
             when others =>
                 r_next_state <= INIT;   -- Fallback to INIT
         end case;
@@ -162,6 +172,8 @@ begin
                     ddr_cs_n <= '1';
                 when REST =>
                     ddr_cs_n <= w_pu_reset_cs_n;
+                when ZQCL =>
+                    ddr_cs_n <= '0';
                 when others =>
                     ddr_cs_n <= '0';
             end case;
@@ -177,6 +189,8 @@ begin
                     ddr_ras_n <= '1';
                 when REST =>
                     ddr_ras_n <= w_pu_reset_ras_n;
+                when ZQCL =>
+                    ddr_ras_n <= '1';
                 when others =>
                     ddr_ras_n <= '1';
             end case;
@@ -192,6 +206,8 @@ begin
                     ddr_cas_n <= '1';
                 when REST =>
                     ddr_cas_n <= w_pu_reset_cas_n;
+                when ZQCL =>
+                    ddr_cas_n <= '1';
                 when others =>
                     ddr_cas_n <= '0';
             end case;
@@ -207,6 +223,8 @@ begin
                     ddr_we_n <= '1';
                 when REST =>
                     ddr_we_n <= w_pu_reset_we_n;
+                when ZQCL =>
+                    ddr_we_n <= '0';
                 when others =>
                     ddr_we_n <= '0';
             end case;
@@ -332,6 +350,19 @@ begin
             end case;
         else
             ddr_odt <= ddr_odt;
+        end if;
+    end process;
+
+    process(clk) begin
+        if rising_edge(clk) then
+            case r_curr_state is
+                when ZQCL =>
+                    r_zqcl_counter <= r_zqcl_counter + 1;
+                when others =>
+                    r_zqcl_counter <= (others => '0');
+            end case;
+        else
+            r_zqcl_counter <= r_zqcl_counter;  -- Maintain counter value on clock edge
         end if;
     end process;
 

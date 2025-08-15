@@ -26,6 +26,7 @@ module ddr3_controller_sim();
     end
 
     ddr3_controller #(
+        .DDR_tZQinit    (512 * DDR_CLK_PERIOD), // 512 cycles for ZQINIT
         .DDR_CLK_PERIOD (DDR_CLK_PERIOD)
     ) dut (
         .clk    (ddr_clk),
