@@ -46,6 +46,7 @@ architecture Behavioral of powerup_reset is
     constant RECK_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(500 us / UI_CLK_PERIOD), 18);
     constant XPR_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(t_XPR / UI_CLK_PERIOD), 18);
     constant MRD_COUNT_MAX : unsigned(17 downto 0) := to_unsigned((t_MRD + 1) * 4, 18);
+    constant MRD_INTERVAL : unsigned(17 downto 0) := to_unsigned(t_MRD + 1, 18);
 
     signal r_curr_state : std_logic_vector := INIT;
     signal r_next_state : std_logic_vector := INIT;
@@ -151,6 +152,8 @@ begin
                     end if;
                 when CREG =>
                     r_cke <= '1';
+                when FNSH =>
+                    r_cke <= '1';
                 when others =>
                     r_cke <= '0';
             end case;
@@ -171,7 +174,7 @@ begin
             when CREG =>
                 r_cs_n <= '0';
             when FNSH =>
-                r_cs_n <= '0';
+                r_cs_n <= '1';
             when others =>
                 r_cs_n <= '0';
             end case;
@@ -184,19 +187,19 @@ begin
         if rising_edge(clk) then
             case r_curr_state is
                 when CREG =>
-                    if(to_integer(r_mrd_counter) = 0) then
+                    if(r_mrd_counter = 0) then
                         r_ras_n <= '0';
                         r_cas_n <= '0';
                         r_we_n <= '0';
-                    elsif (to_integer(r_mrd_counter) = 5) then
+                    elsif (r_mrd_counter = MRD_INTERVAL) then
                         r_ras_n <= '0';
                         r_cas_n <= '0';
                         r_we_n <= '0';
-                    elsif (to_integer(r_mrd_counter) = 10) then
+                    elsif (r_mrd_counter = 2 * MRD_INTERVAL) then
                         r_ras_n <= '0';
                         r_cas_n <= '0';
                         r_we_n <= '0';
-                    elsif (to_integer(r_mrd_counter) = 15) then
+                    elsif (r_mrd_counter = 3 * MRD_INTERVAL) then
                         r_ras_n <= '0';
                         r_cas_n <= '0';
                         r_we_n <= '0';
@@ -206,9 +209,9 @@ begin
                         r_we_n <= '1';
                     end if;
                 when FNSH =>
-                    r_ras_n <= '0';
-                    r_cas_n <= '0';
-                    r_we_n <= '0';
+                    r_ras_n <= '1';
+                    r_cas_n <= '1';
+                    r_we_n <= '1';
                 when others =>
                     r_ras_n <= '1';
                     r_cas_n <= '1';
