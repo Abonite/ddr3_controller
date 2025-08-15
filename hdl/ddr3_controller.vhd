@@ -37,7 +37,8 @@ entity ddr3_controller is
         o_ddr_dq        : out std_logic_vector(DDR_DATA_WIDTH - 1 downto 0);
         o_ddr_reset_n   : out std_logic := '0';
         o_ddr_dqs       : out std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0);
-        o_ddr_dqs_n     : out std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0)
+        o_ddr_dqs_n     : out std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0);
+        o_ddr_odt       : out std_logic := '0'
     );
 end ddr3_controller;
 
@@ -45,12 +46,14 @@ architecture Behavioral of ddr3_controller is
     constant INIT: std_logic_vector(3 downto 0) := "0000";
     constant REST: std_logic_vector(3 downto 0) := "0001";
     constant ZQCL: std_logic_vector(3 downto 0) := "0010";
+    constant RADY: std_logic_vector(3 downto 0) := "0100";
     
     signal r_curr_state: std_logic_vector(3 downto 0) := INIT;
     signal r_next_state: std_logic_vector(3 downto 0) := INIT;
 
-    signal resetting: std_logic := '0';
-    signal resetted: std_logic := '0';
+    signal r_start_pu_reset: std_logic := '0';
+    signal r_pu_resetting: std_logic := '0';
+    signal w_pu_reset_finished: std_logic := '0';
 begin
     process(clk) begin
         if rising_edge(clk) then
@@ -64,21 +67,55 @@ begin
         end if;
     end process;
 
-    process(r_curr_state, resetted) begin
+    process(all) begin
         case r_curr_state is
             when INIT =>
                 r_next_state <= REST;  -- Transition to REST state after INIT
             when REST =>
-                if (resetted = '1') then
+                if (w_pu_reset_finished = '1') then
                     r_next_state <= ZQCL;
                 else
                     r_next_state <= REST;  -- Remain in INIT if condition not met
                 end if;
             when ZQCL =>
-                r_next_state <= INIT;  -- Loop back to INIT for simplicity
+                r_next_state <= RADY;  -- Loop back to INIT for simplicity
             when others =>
                 r_next_state <= INIT;   -- Fallback to INIT
         end case;
+    end process;
+
+    process(clk) begin
+        if rising_edge(clk) then
+            case r_curr_state is
+                when INIT =>
+                    r_pu_resetting <= '0';  -- No reset in INIT state
+                when REST =>
+                    r_pu_resetting <= '1';  -- Trigger power-up reset in REST state
+                when others =>
+                    r_pu_resetting <= '0';  -- Trigger power-up reset on clock edge
+                end case;
+        else
+            r_pu_resetting <= r_pu_resetting;  -- Default to no reset
+        end if;
+    end process;
+
+    process(clk) begin
+        if rising_edge(clk) then
+            case r_curr_state is
+                when INIT =>
+                    r_start_pu_reset <= '0';  -- No reset in INIT state
+                when REST =>
+                    if (r_pu_resetting = '1') then
+                        r_start_pu_reset <= '0';  -- Trigger power-up reset in REST state
+                    else
+                        r_start_pu_reset <= '1';  -- No reset if not resetting
+                    end if;
+                when others =>
+                    r_start_pu_reset <= '0';  -- Trigger power-up reset on clock edge
+                end case;
+        else
+            r_start_pu_reset <= r_start_pu_reset;  -- Default to no reset
+        end if;
     end process;
 
     u_reset: entity work.powerup_reset
@@ -86,6 +123,7 @@ begin
             t_RESET => 200 us,
             t_CKE => DDR_tCKSRX,
             t_MRD => 4,
+            t_XPR => 15 ns,
 
             UI_CLK_PERIOD => CLK_PERIOD,
 
@@ -96,10 +134,10 @@ begin
         )
         port map (
             clk => clk,
-            i_resetting => resetting,
+            i_resetting => r_start_pu_reset,
             o_reset_n => o_ddr_reset_n,
             o_cke => o_ddr_cke,
-            o_reset_finished => resetted
+            o_reset_finished => w_pu_reset_finished
         );
 
     OBUFDS_inst : OBUFDS
@@ -112,5 +150,4 @@ begin
             OB => o_ddr_ck_n,   -- Diff_n output (connect directly to top-level port)
             I => ddr_clk      -- Buffer input 
         );
-  
 end architecture;
