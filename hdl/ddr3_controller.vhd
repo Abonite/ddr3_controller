@@ -54,6 +54,22 @@ architecture Behavioral of ddr3_controller is
     signal r_start_pu_reset: std_logic := '0';
     signal r_pu_resetting: std_logic := '0';
     signal w_pu_reset_finished: std_logic := '0';
+
+    signal ddr_cke: std_logic := '0';
+    signal ddr_cs_n: std_logic := '1';
+    signal ddr_ras_n: std_logic := '1';
+    signal ddr_cas_n: std_logic := '1';
+    signal ddr_we_n: std_logic := '1';
+    signal ddr_ba: std_logic_vector(2 downto 0) := (others => '0');
+    signal ddr_dqm: std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0) := (others => '1');
+    signal ddr_addr: std_logic_vector(15 downto 0) := (others => '0');
+    signal ddr_dq: std_logic_vector(DDR_DATA_WIDTH - 1 downto 0) := (others => '0');
+    signal ddr_reset_n: std_logic := '0';
+    signal ddr_dqs: std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0) := (others => '0');
+    signal ddr_dqs_n: std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0) := (others => '0');
+    signal ddr_odt: std_logic := '0';
+
+    signal w_pu_reset_reset_n;
 begin
     process(clk) begin
         if rising_edge(clk) then
