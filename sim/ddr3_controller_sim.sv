@@ -1,5 +1,5 @@
 module ddr3_controller_sim();
-    localparam DDR_CLK_PERIOD = 3;  // DDR clock period in nanoseconds (666 MHz)
+    localparam DDR_CLK_PERIOD = 3.0;  // DDR clock period in nanoseconds (666 MHz)
     localparam UIDDDR = 2;          //2:1
 
     localparam CLK_PERIOD = DDR_CLK_PERIOD * UIDDDR;
@@ -26,10 +26,9 @@ module ddr3_controller_sim();
     end
 
     ddr3_controller #(
-        .CLK_PERIOD (CLK_PERIOD)
+        .DDR_CLK_PERIOD (DDR_CLK_PERIOD)
     ) dut (
-        .clk    (clk),
-        .ddr_clk(ddr_clk),
+        .clk    (ddr_clk),
         .reset  (rst)
     );
 

@@ -10,7 +10,7 @@ entity powerup_reset is
         t_XPR: time := -1 ns;
         t_MRD: integer := -1;
 
-        UI_CLK_PERIOD: time := -1 ns;
+        DDR_CLK_PERIOD: time := -1 ns;
 
         MR0: std_logic_vector(15 downto 0) := (others => '0');
         MR1: std_logic_vector(15 downto 0) := (others => '0');
@@ -41,11 +41,11 @@ architecture Behavioral of powerup_reset is
     constant CREG : std_logic_vector(3 downto 0) := "0100";
     constant FNSH : std_logic_vector(3 downto 0) := "1000";
 
-    constant RESET_COUNT_MAX : unsigned(16 downto 0) := to_unsigned(integer(t_RESET / UI_CLK_PERIOD), 17);
-    constant CKE_COUNT_MAX : unsigned(16 downto 0) := to_unsigned(integer(t_CKE / UI_CLK_PERIOD), 17);
-    constant RECK_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(500 us / UI_CLK_PERIOD), 18);
-    constant XPR_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(t_XPR / UI_CLK_PERIOD), 18);
-    constant MRD_COUNT_MAX : unsigned(17 downto 0) := to_unsigned((t_MRD + 1) * 4, 18);
+    constant RESET_COUNT_MAX : unsigned(16 downto 0) := to_unsigned(integer(t_RESET / DDR_CLK_PERIOD), 17);
+    constant CKE_COUNT_MAX : unsigned(16 downto 0) := to_unsigned(integer(t_CKE / DDR_CLK_PERIOD), 17);
+    constant RECK_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(500 us / DDR_CLK_PERIOD), 18);
+    constant XPR_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(integer(t_XPR / DDR_CLK_PERIOD), 18);
+    constant MRD_COUNT_MAX : unsigned(17 downto 0) := to_unsigned(((t_MRD + 1) * 4) - 2, 18); --minus 2 to pre-end state
     constant MRD_INTERVAL : unsigned(17 downto 0) := to_unsigned(t_MRD + 1, 18);
 
     signal r_curr_state : std_logic_vector := INIT;
@@ -328,4 +328,6 @@ begin
     o_cas_n <= r_cas_n;
     o_we_n <= r_we_n;
     o_reset_finished <= r_reset_finished;
+    o_ba <= r_baddr;
+    o_addr <= r_addr;
 end architecture;
