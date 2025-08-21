@@ -37,7 +37,9 @@ entity ddr3_controller is
         o_ddr_reset_n   : out std_logic := '0';
         o_ddr_dqs       : out std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0);
         o_ddr_dqs_n     : out std_logic_vector(DDR_DATA_WIDTH/8 - 1 downto 0);
-        o_ddr_odt       : out std_logic := '0'
+        o_ddr_odt       : out std_logic := '0';
+
+        o_ddr_ready     : out std_logic := '0'
     );
 end ddr3_controller;
 
@@ -57,6 +59,8 @@ architecture Behavioral of ddr3_controller is
     signal w_pu_reset_finished: std_logic := '0';
 
     signal r_zqcl_counter: unsigned(9 downto 0) := (others => '0');
+
+    signal ddr_ready: std_logic := '0';
 
     signal ddr_cke: std_logic := '0';
     signal ddr_cs_n: std_logic := '1';
@@ -368,6 +372,25 @@ begin
         end if;
     end process;
 
+    process(clk) begin
+        if rising_edge(clk) then
+            case r_curr_state is
+                when INIT =>
+                    ddr_ready <= '0';  -- Not ready in INIT state
+                when REST =>
+                    ddr_ready <= '0';  -- Not ready in REST state
+                when RADY =>
+                    ddr_ready <= '1';  -- Ready after RADY state
+                when others =>
+                    ddr_ready <= ddr_ready;  -- Default to not ready
+            end case;
+        else
+            ddr_ready <= ddr_ready;  -- Maintain ready state on clock edge
+        end if;
+        
+    end process;
+    
+
     u_reset: entity work.powerup_reset
         generic map (
             t_RESET => 200 us,
@@ -422,4 +445,5 @@ begin
     o_ddr_dqs <= ddr_dqs;
     o_ddr_dqs_n <= ddr_dqs_n;
     o_ddr_odt <= ddr_odt;
+    o_ddr_ready <= ddr_ready;
 end architecture;
