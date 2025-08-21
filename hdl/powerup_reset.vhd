@@ -260,10 +260,10 @@ begin
                     elsif (r_mrd_counter = 15) then
                         r_addr <= MR1;
                     else
-                        r_addr <= (others => '0');
+                        r_addr <= (others => '1');
                     end if;
                 when others =>
-                    r_addr <= (others => '0');
+                    r_addr <= (others => '1');
             end case;
         else
             r_addr <= r_addr;

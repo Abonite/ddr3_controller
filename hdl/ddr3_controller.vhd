@@ -267,11 +267,13 @@ begin
         if rising_edge(clk) then
             case r_curr_state is
                 when INIT =>
-                    ddr_addr <= (others => '0');
+                    ddr_addr <= (others => '1');
                 when REST =>
                     ddr_addr <= w_pu_reset_addr;
+                when ZQCL =>
+                    ddr_addr <= (others => '1');
                 when others =>
-                    ddr_addr <= (others => '0');
+                    ddr_addr <= (others => '1');
             end case;
         else
             ddr_addr <= ddr_addr;
